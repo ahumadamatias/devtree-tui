@@ -312,18 +312,6 @@ pub(super) fn open_rename_workspace(
     state.mode = Mode::RenameWorkspace;
 }
 
-pub(crate) fn open_new_workspace_dialog(state: &mut AppState, cwd: std::path::PathBuf) {
-    let suggested_name = crate::workspace::derive_label_from_cwd(&cwd);
-    state.creating_new_tab = false;
-    state.requested_new_tab_name = None;
-    state.pending_workspace_create_cwd = Some(cwd);
-    state.pending_devtree_workspace_create = false;
-    state.rename_pane_target = None;
-    state.name_input = suggested_name;
-    state.name_input_replace_on_type = true;
-    state.mode = Mode::RenameWorkspace;
-}
-
 pub(crate) fn open_new_devtree_workspace_dialog(state: &mut AppState) {
     state.creating_new_tab = false;
     state.requested_new_tab_name = None;

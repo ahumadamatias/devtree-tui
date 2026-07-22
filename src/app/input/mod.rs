@@ -50,7 +50,6 @@ pub(crate) use self::{
     modal::{
         handle_global_menu_key, handle_keybind_help_key, handle_navigator_key,
         insert_navigator_search_text, insert_rename_input_text, open_new_devtree_workspace_dialog,
-        open_new_workspace_dialog,
     },
     navigate::{
         terminal_direct_indexed_navigation_action, terminal_direct_non_indexed_navigation_action,

@@ -76,35 +76,8 @@ impl App {
         })
     }
 
-    pub(crate) fn begin_tui_workspace_create(&mut self, request_id: &'static str) {
-        if request_id == "tui.workspace.create" {
-            super::input::open_new_devtree_workspace_dialog(&mut self.state);
-            return;
-        }
-        if self.state.prompt_new_workspace_name {
-            let follow_cwd = self.workspace_creation_source().and_then(|ws_idx| {
-                self.focused_pane_cwd_in_workspace(ws_idx)
-                    .or_else(|| self.seed_cwd_from_workspace(ws_idx))
-            });
-            let cwd = self.resolve_new_terminal_cwd(follow_cwd);
-            super::input::open_new_workspace_dialog(&mut self.state, cwd);
-            return;
-        }
-
-        self.runtime_workspace_create(
-            request_id,
-            crate::api::schema::WorkspaceCreateParams {
-                cwd: None,
-                focus: true,
-                label: None,
-                env: Default::default(),
-            },
-        );
-        self.state.mode = if self.state.active.is_some() {
-            Mode::Terminal
-        } else {
-            Mode::Navigate
-        };
+    pub(crate) fn begin_tui_workspace_create(&mut self, _request_id: &'static str) {
+        super::input::open_new_devtree_workspace_dialog(&mut self.state);
     }
 
     /// Create a workspace with a real PTY (needs event_tx).
