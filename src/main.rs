@@ -8,7 +8,7 @@ use crossterm::event::{
 use crossterm::event::{PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags};
 use crossterm::execute;
 
-pub(crate) const HERDR_ENV_VAR: &str = "HERDR_ENV";
+pub(crate) const HERDR_ENV_VAR: &str = "DEVTREE_ENV";
 pub(crate) const HERDR_ENV_VALUE: &str = "1";
 const NESTED_HERDR_MESSAGES: [&str; 6] = [
     "inception detected. we need to go deeper... said no one ever.",
@@ -64,6 +64,7 @@ mod cli;
 mod client;
 mod config;
 mod detect;
+mod devtree;
 mod events;
 mod ghostty;
 mod handoff_runtime;
@@ -102,11 +103,11 @@ mod workspace;
 mod worktree;
 
 fn init_logging() {
-    crate::logging::init_file_logging("herdr.log");
+    crate::logging::init_file_logging("devtree.log");
 }
 
-const DEFAULT_CONFIG: &str = r##"# herdr configuration
-# Place this file at ~/.config/herdr/config.toml
+const DEFAULT_CONFIG: &str = r##"# devtree configuration
+# Place this file at ~/.config/devtree/config.toml
 
 # Show first-run notification setup on startup.
 # Missing also shows onboarding; set false after you've chosen.
@@ -533,32 +534,37 @@ fn main() -> io::Result<()> {
     }
 
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("herdr — terminal workspace manager for AI coding agents");
+        println!("devtree — terminal workspace manager for Git worktrees and AI coding agents");
         println!();
-        println!("Usage: herdr [options]");
-        println!("       herdr --session <name> [options]");
-        println!("       herdr --remote <ssh-target> [--session <name>]");
-        println!("       herdr session attach <name>");
-        println!("       herdr completion zsh");
-        println!("       herdr update [--handoff]");
-        println!("       herdr channel set <stable|preview>");
-        println!("       herdr server stop");
-        println!("       herdr server reload-config");
-        println!("       herdr api <subcommand> ...");
-        println!("       herdr completion <shell>");
-        println!("       herdr config <subcommand> ...");
-        println!("       herdr channel <subcommand> ...");
-        println!("       herdr workspace <subcommand> ...");
-        println!("       herdr worktree <subcommand> ...");
-        println!("       herdr tab <subcommand> ...");
-        println!("       herdr notification <subcommand> ...");
-        println!("       herdr agent <subcommand> ...");
-        println!("       herdr pane <subcommand> ...");
-        println!("       herdr session <subcommand> ...");
-        println!("       herdr integration <subcommand> ...");
+        println!("Usage: devtree [options]");
+        println!("       devtree --session <name> [options]");
+        println!("       devtree --remote <ssh-target> [--session <name>]");
+        println!("       devtree session attach <name>");
+        println!("       devtree completion zsh");
+        println!("       devtree update [--handoff]");
+        println!("       devtree channel set <stable|preview>");
+        println!("       devtree server stop");
+        println!("       devtree server reload-config");
+        println!("       devtree api <subcommand> ...");
+        println!("       devtree completion <shell>");
+        println!("       devtree config <subcommand> ...");
+        println!("       devtree channel <subcommand> ...");
+        println!("       devtree workspace <subcommand> ...");
+        println!("       devtree worktree <subcommand> ...");
+        println!("       devtree tab <subcommand> ...");
+        println!("       devtree notification <subcommand> ...");
+        println!("       devtree agent <subcommand> ...");
+        println!("       devtree pane <subcommand> ...");
+        println!("       devtree session <subcommand> ...");
+        println!("       devtree integration <subcommand> ...");
+        println!("       devtree workspaces [--root PATH] [--json]");
         println!();
         println!("Common commands:");
         for (command, description) in [
+            (
+                "devtree workspaces",
+                "List workspaces from ~/DevTree, including worktrees and projects",
+            ),
             ("herdr", "Launch or attach to the persistent session"),
             (
                 "herdr status [server|client]",
@@ -640,12 +646,12 @@ fn main() -> io::Result<()> {
         println!("Config: {}", config::config_path().display());
         println!("Logs:   {}", logging::help_log_paths_summary());
         println!("Env:    HERDR_CONFIG_PATH overrides config file path");
-        println!("Home:   https://herdr.dev");
+        println!("Home:   https://github.com/ahumadamatias/devtree");
         return Ok(());
     }
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
-        println!("herdr {}", crate::build_info::version());
+        println!("devtree {}", crate::build_info::version());
         return Ok(());
     }
 

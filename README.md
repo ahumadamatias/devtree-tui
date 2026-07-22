@@ -1,3 +1,13 @@
+# DevTree TUI
+
+DevTree TUI is a public AGPL-3.0-or-later fork of [herdr](https://github.com/ogulcancelik/herdr).
+It retains Herdr's persistent terminal runtime and adds DevTree workspace discovery. Run
+`devtree workspaces` to inspect `~/DevTree` or pass `--root PATH` for another root.
+
+The original Herdr copyright notices and AGPL-3.0-or-later license remain in effect for this fork.
+
+---
+
 # herdr
 
 

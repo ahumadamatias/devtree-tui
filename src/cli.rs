@@ -11,6 +11,7 @@ use crate::api::schema::{
 mod agent;
 mod api;
 mod completion;
+mod devtree;
 mod integration;
 mod notification;
 mod pane;
@@ -87,6 +88,7 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
         "api" => api::run_api_command(&args[2..])?,
         "status" => status::run_status_command(&args[2..])?,
         "completion" | "completions" => completion::run_completion_command(&args[2..])?,
+        "workspaces" => devtree::run_devtree_command(&args[2..])?,
         "config" => run_config_command(&args[2..])?,
         "channel" => run_channel_command(&args[2..])?,
         "workspace" => workspace::run_workspace_command(&args[2..])?,

@@ -3,8 +3,8 @@ use std::io::Write;
 use clap::{Arg, ArgAction, ArgGroup, Command, ValueHint};
 
 pub(super) fn command() -> Command {
-    let command = Command::new("herdr")
-        .about("terminal workspace manager for AI coding agents")
+    let command = Command::new("devtree")
+        .about("terminal workspace manager for Git worktrees and AI coding agents")
         .disable_help_flag(true)
         .disable_version_flag(true)
         .arg(help_flag())
@@ -26,6 +26,7 @@ pub(super) fn command() -> Command {
                 .help("Print version and exit"),
         )
         .subcommand(completion_command())
+        .subcommand(workspaces_command())
         .subcommand(update_command())
         .subcommand(status_command())
         .subcommand(config_command())
@@ -78,7 +79,7 @@ fn write_requested_help(args: &[String], output: &mut impl Write) -> std::io::Re
     let mut root = command();
     root.build();
     let mut selected = &mut root;
-    let mut path = vec!["herdr".to_string()];
+    let mut path = vec!["devtree".to_string()];
     for segment in &args[1..help_index] {
         if selected.find_subcommand(segment).is_none() {
             break;
@@ -109,6 +110,13 @@ fn completion_command() -> Command {
                 .value_parser(super::completion::SUPPORTED_SHELLS)
                 .help("Shell to generate completions for"),
         )
+}
+
+fn workspaces_command() -> Command {
+    Command::new("workspaces")
+        .about("List DevTree workspaces, projects, and Git worktrees")
+        .arg(path_option("root", "PATH"))
+        .arg(json_flag())
 }
 
 fn update_command() -> Command {

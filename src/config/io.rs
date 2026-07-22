@@ -20,9 +20,9 @@ const KNOWN_TOP_LEVEL_CONFIG_KEYS: &[&str] = &[
 
 pub fn app_dir_name() -> &'static str {
     if cfg!(debug_assertions) {
-        "herdr-dev"
+        "devtree-dev"
     } else {
-        "herdr"
+        "devtree"
     }
 }
 
