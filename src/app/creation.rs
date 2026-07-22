@@ -114,7 +114,7 @@ impl App {
             return;
         };
         let quoted_url = repository_url.replace('\'', "'\\''");
-        let command = format!("git clone -- '{quoted_url}' repo-base\n");
+        let command = format!("git clone -- '{quoted_url}' repo-base && cd repo-base\n");
         if let Err(error) = runtime.try_send_bytes(Bytes::from(command)) {
             self.state.config_diagnostic = Some(format!("could not start clone: {error}"));
             return;
