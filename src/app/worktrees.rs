@@ -94,11 +94,18 @@ impl App {
             .map(|duration| duration.as_micros().min(u128::from(u64::MAX)) as u64)
             .unwrap_or(0);
         let branch = crate::worktree::generated_branch_slug(seed);
-        let checkout_path = crate::worktree::default_checkout_path(
-            &self.state.worktree_directory,
-            &repo_name,
-            &branch,
-        );
+        let checkout_path = space
+            .repo_root
+            .parent()
+            .filter(|path| path.join(".devtree.json").is_file())
+            .map(|path| path.join(crate::worktree::branch_to_path_slug(&branch)))
+            .unwrap_or_else(|| {
+                crate::worktree::default_checkout_path(
+                    &self.state.worktree_directory,
+                    &repo_name,
+                    &branch,
+                )
+            });
 
         tracing::info!(
             ws_idx,

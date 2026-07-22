@@ -536,6 +536,7 @@ impl App {
             creating_new_tab: false,
             requested_new_tab_name: None,
             pending_workspace_create_cwd: None,
+            pending_devtree_workspace_create: false,
             rename_pane_target: None,
             worktree_create: None,
             worktree_open: None,
@@ -934,15 +935,7 @@ impl App {
 
             if self.state.request_new_workspace {
                 self.state.request_new_workspace = false;
-                self.runtime_workspace_create(
-                    "tui.workspace.create",
-                    crate::api::schema::WorkspaceCreateParams {
-                        cwd: None,
-                        focus: true,
-                        label: None,
-                        env: Default::default(),
-                    },
-                );
+                self.begin_tui_workspace_create("tui.workspace.create");
                 needs_render = true;
             }
 

@@ -3,8 +3,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 struct Metadata {
@@ -13,6 +12,17 @@ struct Metadata {
     repo_url: Option<String>,
     #[serde(rename = "mainBranch")]
     main_branch: Option<String>,
+}
+
+#[derive(Serialize)]
+struct NewWorkspaceMetadata<'a> {
+    name: &'a str,
+    #[serde(rename = "repoUrl")]
+    repo_url: Option<String>,
+    #[serde(rename = "mainBranch")]
+    main_branch: &'a str,
+    #[serde(rename = "createdAt")]
+    created_at: String,
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -97,6 +107,41 @@ pub(crate) fn discover(root: &Path) -> io::Result<Vec<Workspace>> {
     Ok(workspaces)
 }
 
+pub(crate) fn create_workspace(root: &Path, name: &str) -> io::Result<PathBuf> {
+    let name = name.trim();
+    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\\']) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "workspace name must be a single directory name",
+        ));
+    }
+    let path = root.join(name);
+    if path.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!("workspace already exists: {}", path.display()),
+        ));
+    }
+    fs::create_dir_all(path.join("projects"))?;
+    let metadata = NewWorkspaceMetadata {
+        name,
+        repo_url: None,
+        main_branch: "main",
+        created_at: format!(
+            "{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        ),
+    };
+    fs::write(
+        path.join(".devtree.json"),
+        serde_json::to_string_pretty(&metadata)?,
+    )?;
+    Ok(path)
+}
+
 fn list_projects(path: &Path) -> io::Result<Vec<Project>> {
     let entries = match fs::read_dir(path) {
         Ok(entries) => entries,
@@ -177,6 +222,17 @@ mod tests {
         assert_eq!(workspaces[0].name, "Alpha");
         assert_eq!(workspaces[0].projects[0].name, "app");
         assert_eq!(workspaces[1].name, "beta");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn creates_an_empty_workspace_with_metadata() {
+        let root = std::env::temp_dir().join(format!("devtree-create-test-{}", std::process::id()));
+        let path = create_workspace(&root, "new-project").unwrap();
+
+        assert!(path.join("projects").is_dir());
+        assert!(path.join(".devtree.json").is_file());
+        assert_eq!(discover(&root).unwrap()[0].name, "new-project");
         fs::remove_dir_all(root).unwrap();
     }
 }

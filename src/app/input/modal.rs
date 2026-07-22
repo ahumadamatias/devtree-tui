@@ -303,6 +303,7 @@ pub(super) fn open_rename_workspace(
     ws_idx: usize,
 ) {
     state.pending_workspace_create_cwd = None;
+    state.pending_devtree_workspace_create = false;
     state.selected = ws_idx;
     state.rename_pane_target = None;
     state.name_input =
@@ -316,9 +317,21 @@ pub(crate) fn open_new_workspace_dialog(state: &mut AppState, cwd: std::path::Pa
     state.creating_new_tab = false;
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = Some(cwd);
+    state.pending_devtree_workspace_create = false;
     state.rename_pane_target = None;
     state.name_input = suggested_name;
     state.name_input_replace_on_type = true;
+    state.mode = Mode::RenameWorkspace;
+}
+
+pub(crate) fn open_new_devtree_workspace_dialog(state: &mut AppState) {
+    state.creating_new_tab = false;
+    state.requested_new_tab_name = None;
+    state.pending_workspace_create_cwd = None;
+    state.pending_devtree_workspace_create = true;
+    state.rename_pane_target = None;
+    state.name_input.clear();
+    state.name_input_replace_on_type = false;
     state.mode = Mode::RenameWorkspace;
 }
 
@@ -943,7 +956,27 @@ impl App {
 
         match self.state.mode {
             Mode::RenameWorkspace => {
-                if let Some(cwd) = self.state.pending_workspace_create_cwd.take() {
+                if self.state.pending_devtree_workspace_create {
+                    match crate::devtree::create_workspace(
+                        &crate::devtree::default_root(),
+                        &new_name,
+                    ) {
+                        Ok(cwd) => {
+                            self.runtime_workspace_create(
+                                "tui.devtree.workspace.create",
+                                crate::api::schema::WorkspaceCreateParams {
+                                    cwd: Some(cwd.display().to_string()),
+                                    focus: true,
+                                    label: Some(new_name),
+                                    env: Default::default(),
+                                },
+                            );
+                        }
+                        Err(err) => {
+                            self.state.config_diagnostic = Some(err.to_string());
+                        }
+                    }
+                } else if let Some(cwd) = self.state.pending_workspace_create_cwd.take() {
                     let suggested_name = crate::workspace::derive_label_from_cwd(&cwd);
                     let label = workspace_create_label(&new_name, &suggested_name);
                     self.runtime_workspace_create(
@@ -1297,6 +1330,7 @@ fn cancel_rename_modal(state: &mut AppState) {
     state.creating_new_tab = false;
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = None;
+    state.pending_devtree_workspace_create = false;
     state.rename_pane_target = None;
     state.name_input.clear();
     state.name_input_replace_on_type = false;
