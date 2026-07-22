@@ -4222,6 +4222,9 @@ pub fn run_server() -> io::Result<()> {
         .map_err(io::Error::other)?;
 
     let result = rt.block_on(async {
+        // Only populate DevTree on a fresh session; a saved session remains authoritative.
+        let fresh_session = !crate::persist::session_exists();
+
         // Create the App (with AppState, event channels, etc.).
         let mut app = app::App::new(
             &loaded_config.config,
@@ -4230,7 +4233,9 @@ pub fn run_server() -> io::Result<()> {
             api_rx,
             event_hub,
         );
-        seed_startup_workspace_if_empty(&mut app);
+        if !bootstrap_devtree_workspaces(&mut app, fresh_session) {
+            seed_startup_workspace_if_empty(&mut app);
+        }
 
         // The server runs headless — disable local notification side effects.
         // Sound and terminal notifications are forwarded to connected clients
@@ -4271,6 +4276,51 @@ pub fn run_server() -> io::Result<()> {
     rt.shutdown_timeout(Duration::from_millis(100));
     crate::logging::shutdown("server");
     result
+}
+
+fn bootstrap_devtree_workspaces(app: &mut app::App, fresh_session: bool) -> bool {
+    if !fresh_session || !app.state.workspaces.is_empty() {
+        return false;
+    }
+
+    let discovered = match crate::devtree::discover(&crate::devtree::default_root()) {
+        Ok(workspaces) => workspaces,
+        Err(err) => {
+            warn!(err = %err, "failed to discover DevTree workspaces");
+            return false;
+        }
+    };
+    let mut opened_paths = std::collections::HashSet::new();
+    let mut opened = 0;
+    for workspace in discovered {
+        for worktree in workspace.worktrees {
+            let canonical_path =
+                std::fs::canonicalize(&worktree.path).unwrap_or_else(|_| worktree.path.clone());
+            if !opened_paths.insert(canonical_path.clone()) {
+                continue;
+            }
+            match app.create_workspace_with_options(canonical_path.clone(), false) {
+                Ok(index) => {
+                    let label = match worktree.branch {
+                        Some(branch) => format!("{} / {branch}", workspace.name),
+                        None => workspace.name.clone(),
+                    };
+                    app.state.workspaces[index].set_custom_name(label);
+                    opened += 1;
+                }
+                Err(err) => {
+                    warn!(cwd = %canonical_path.display(), err = %err, "failed to open DevTree worktree")
+                }
+            }
+        }
+    }
+    if opened > 0 {
+        app.state.switch_workspace(0);
+        app.state.mode = app::Mode::Navigate;
+        info!(workspaces = opened, "opened DevTree workspaces");
+        return true;
+    }
+    false
 }
 
 fn seed_startup_workspace_if_empty(app: &mut app::App) {

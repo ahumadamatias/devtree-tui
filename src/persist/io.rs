@@ -11,6 +11,10 @@ fn session_path() -> PathBuf {
     crate::session::data_dir().join("session.json")
 }
 
+pub fn session_exists() -> bool {
+    session_path().exists()
+}
+
 fn session_history_path() -> PathBuf {
     crate::session::data_dir().join("session-history.json")
 }
