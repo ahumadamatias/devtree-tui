@@ -4293,6 +4293,13 @@ fn bootstrap_devtree_workspaces(app: &mut app::App, fresh_session: bool) -> bool
     let mut opened_paths = std::collections::HashSet::new();
     let mut opened = 0;
     for workspace in discovered {
+        let repo_root = workspace
+            .worktrees
+            .iter()
+            .find(|worktree| worktree.is_base_repository)
+            .map(|worktree| {
+                std::fs::canonicalize(&worktree.path).unwrap_or_else(|_| worktree.path.clone())
+            });
         for worktree in workspace.worktrees {
             let canonical_path =
                 std::fs::canonicalize(&worktree.path).unwrap_or_else(|_| worktree.path.clone());
@@ -4301,11 +4308,19 @@ fn bootstrap_devtree_workspaces(app: &mut app::App, fresh_session: bool) -> bool
             }
             match app.create_workspace_with_options(canonical_path.clone(), false) {
                 Ok(index) => {
-                    let label = match worktree.branch {
-                        Some(branch) => format!("{} / {branch}", workspace.name),
-                        None => workspace.name.clone(),
-                    };
-                    app.state.workspaces[index].set_custom_name(label);
+                    if let Some(repo_root) = &repo_root {
+                        app.state.workspaces[index].worktree_space =
+                            Some(crate::workspace::WorktreeSpaceMembership {
+                                key: repo_root.display().to_string(),
+                                label: workspace.name.clone(),
+                                repo_root: repo_root.clone(),
+                                checkout_path: canonical_path,
+                                is_linked_worktree: !worktree.is_base_repository,
+                            });
+                        if worktree.is_base_repository {
+                            app.state.workspaces[index].set_custom_name(workspace.name.clone());
+                        }
+                    }
                     opened += 1;
                 }
                 Err(err) => {
