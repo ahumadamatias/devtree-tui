@@ -317,6 +317,19 @@ pub(crate) fn open_new_devtree_workspace_dialog(state: &mut AppState) {
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = None;
     state.pending_devtree_workspace_create = true;
+    state.pending_devtree_clone_workspace = None;
+    state.rename_pane_target = None;
+    state.name_input.clear();
+    state.name_input_replace_on_type = false;
+    state.mode = Mode::RenameWorkspace;
+}
+
+fn open_devtree_clone_dialog(state: &mut AppState, ws_idx: usize) {
+    state.creating_new_tab = false;
+    state.requested_new_tab_name = None;
+    state.pending_workspace_create_cwd = None;
+    state.pending_devtree_workspace_create = false;
+    state.pending_devtree_clone_workspace = Some(ws_idx);
     state.rename_pane_target = None;
     state.name_input.clear();
     state.name_input_replace_on_type = false;
@@ -944,7 +957,9 @@ impl App {
 
         match self.state.mode {
             Mode::RenameWorkspace => {
-                if self.state.pending_devtree_workspace_create {
+                if let Some(ws_idx) = self.state.pending_devtree_clone_workspace {
+                    self.start_devtree_clone(ws_idx, &new_name);
+                } else if self.state.pending_devtree_workspace_create {
                     match crate::devtree::create_workspace(
                         &crate::devtree::default_root(),
                         &new_name,
@@ -1148,6 +1163,9 @@ impl App {
     pub(crate) fn apply_context_menu_action_via_api(&mut self, menu: ContextMenuState, idx: usize) {
         let item = menu.items().get(idx).copied();
         match (menu.kind, item) {
+            (ContextMenuKind::Workspace { ws_idx }, Some("Clone repository")) => {
+                open_devtree_clone_dialog(&mut self.state, ws_idx);
+            }
             (ContextMenuKind::GitWorkspace { ws_idx, .. }, Some("New worktree")) => {
                 self.state.request_new_linked_worktree = Some(ws_idx);
                 leave_modal(&mut self.state);
@@ -1319,6 +1337,7 @@ fn cancel_rename_modal(state: &mut AppState) {
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = None;
     state.pending_devtree_workspace_create = false;
+    state.pending_devtree_clone_workspace = None;
     state.rename_pane_target = None;
     state.name_input.clear();
     state.name_input_replace_on_type = false;

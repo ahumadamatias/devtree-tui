@@ -44,6 +44,9 @@ pub(super) fn render_rename_overlay(app: &AppState, frame: &mut Frame, area: Rec
     super::dim_background(frame, area);
 
     let title = match app.mode {
+        Mode::RenameWorkspace if app.pending_devtree_clone_workspace.is_some() => {
+            "clone repository"
+        }
         Mode::RenameWorkspace
             if app.pending_workspace_create_cwd.is_some()
                 || app.pending_devtree_workspace_create =>

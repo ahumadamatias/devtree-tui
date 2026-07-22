@@ -1228,7 +1228,7 @@ pub struct ContextMenuState {
 impl ContextMenuState {
     pub fn items(&self) -> &'static [&'static str] {
         match self.kind {
-            ContextMenuKind::Workspace { .. } => &["Rename", "Close"],
+            ContextMenuKind::Workspace { .. } => &["Clone repository", "Rename", "Close"],
             ContextMenuKind::GitWorkspace {
                 is_linked_worktree: false,
                 has_worktree_children: false,
@@ -1438,6 +1438,7 @@ pub struct AppState {
     pub requested_new_tab_name: Option<String>,
     pub pending_workspace_create_cwd: Option<std::path::PathBuf>,
     pub pending_devtree_workspace_create: bool,
+    pub pending_devtree_clone_workspace: Option<usize>,
     pub rename_pane_target: Option<PaneId>,
     pub worktree_create: Option<WorktreeCreateState>,
     pub worktree_open: Option<WorktreeOpenState>,
@@ -1809,6 +1810,7 @@ impl AppState {
             requested_new_tab_name: None,
             pending_workspace_create_cwd: None,
             pending_devtree_workspace_create: false,
+            pending_devtree_clone_workspace: None,
             rename_pane_target: None,
             worktree_create: None,
             worktree_open: None,

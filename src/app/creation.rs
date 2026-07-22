@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use bytes::Bytes;
+
 use crate::api::schema::{EventData, EventEnvelope, EventKind};
 #[cfg(test)]
 use tracing::error;
@@ -78,6 +80,46 @@ impl App {
 
     pub(crate) fn begin_tui_workspace_create(&mut self, _request_id: &'static str) {
         super::input::open_new_devtree_workspace_dialog(&mut self.state);
+    }
+
+    pub(crate) fn start_devtree_clone(&mut self, ws_idx: usize, repository_url: &str) {
+        let repository_url = repository_url.trim();
+        if repository_url.is_empty() || repository_url.contains(['\n', '\r', '\0']) {
+            self.state.config_diagnostic = Some("enter a valid repository URL".into());
+            return;
+        }
+        let Some(workspace) = self.state.workspaces.get(ws_idx) else {
+            return;
+        };
+        let workspace_path = workspace.identity_cwd.clone();
+        let repo_path = workspace_path.join("repo-base");
+        if !workspace_path.join(".devtree.json").is_file() {
+            self.state.config_diagnostic =
+                Some("clone is available only in a DevTree workspace".into());
+            return;
+        }
+        if repo_path.exists() {
+            self.state.config_diagnostic =
+                Some("repo-base already exists in this workspace".into());
+            return;
+        }
+        let Some(pane_id) = workspace.focused_pane_id() else {
+            return;
+        };
+        let Some(terminal_id) = workspace.terminal_id(pane_id) else {
+            return;
+        };
+        let Some(runtime) = self.terminal_runtimes.get(terminal_id) else {
+            self.state.config_diagnostic = Some("workspace terminal is not available".into());
+            return;
+        };
+        let quoted_url = repository_url.replace('\'', "'\\''");
+        let command = format!("git clone -- '{quoted_url}' repo-base\n");
+        if let Err(error) = runtime.try_send_bytes(Bytes::from(command)) {
+            self.state.config_diagnostic = Some(format!("could not start clone: {error}"));
+            return;
+        }
+        self.state.mode = Mode::Terminal;
     }
 
     /// Create a workspace with a real PTY (needs event_tx).
