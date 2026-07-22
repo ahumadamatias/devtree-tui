@@ -76,7 +76,7 @@ impl App {
         })
     }
 
-    pub(super) fn begin_tui_workspace_create(&mut self, request_id: &'static str) {
+    pub(crate) fn begin_tui_workspace_create(&mut self, request_id: &'static str) {
         if request_id == "tui.workspace.create" {
             super::input::open_new_devtree_workspace_dialog(&mut self.state);
             return;

@@ -766,14 +766,7 @@ impl HeadlessServer {
 
         if self.app.state.request_new_workspace {
             self.app.state.request_new_workspace = false;
-            let response = self.headless_workspace_create("headless.workspace.create", None, None);
-            if let Err(error) = response {
-                error!(
-                    code = %error.code,
-                    message = %error.message,
-                    "failed to create workspace"
-                );
-            }
+            self.app.begin_tui_workspace_create("tui.workspace.create");
             needs_render = true;
             crate::render_prof::event("full_render_cause.deferred_new_workspace");
         }
@@ -4730,7 +4723,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn headless_deferred_workspace_create_uses_runtime_events() {
+    async fn headless_deferred_workspace_create_opens_devtree_dialog() {
         let event_hub = api::EventHub::default();
         let mut server = test_headless_server_with_event_hub(event_hub.clone());
 
@@ -4738,19 +4731,9 @@ mod tests {
 
         assert!(server.handle_deferred_requests_headless());
         assert!(!server.app.state.request_new_workspace);
-        assert_eq!(
-            event_hub
-                .events_after(0)
-                .into_iter()
-                .map(|(_, event)| event.event)
-                .collect::<Vec<_>>(),
-            vec![
-                api::schema::EventKind::WorkspaceCreated,
-                api::schema::EventKind::TabCreated,
-                api::schema::EventKind::PaneCreated,
-                api::schema::EventKind::LayoutUpdated,
-            ]
-        );
+        assert_eq!(server.app.state.mode, app::Mode::RenameWorkspace);
+        assert!(server.app.state.pending_devtree_workspace_create);
+        assert!(event_hub.events_after(0).is_empty());
         shutdown_test_runtimes(&mut server);
     }
 
