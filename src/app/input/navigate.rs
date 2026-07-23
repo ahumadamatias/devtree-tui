@@ -208,6 +208,28 @@ impl App {
                     leave_navigate_mode(&mut self.state);
                 }
             }
+            NavigateAction::CloneRepository => {
+                if let Some(ws_idx) = workspace_action_target(&self.state, context)
+                    .filter(|idx| workspace_is_clonable(&self.state, &self.terminal_runtimes, *idx))
+                {
+                    super::modal::open_devtree_clone_dialog(&mut self.state, ws_idx);
+                }
+            }
+            NavigateAction::ToggleWorktreeGroup => {
+                if let Some(ws_idx) = workspace_action_target(&self.state, context) {
+                    if let Some((key, collapsed)) =
+                        crate::ui::workspace_parent_group_state(&self.state, ws_idx)
+                    {
+                        if collapsed {
+                            self.state.collapsed_space_keys.remove(&key);
+                        } else {
+                            self.state.collapsed_space_keys.insert(key);
+                        }
+                        self.state.mark_session_dirty();
+                    }
+                    leave_navigate_mode(&mut self.state);
+                }
+            }
             NavigateAction::RenameWorkspace => {
                 if let Some(ws_idx) = workspace_action_target(&self.state, context) {
                     super::modal::open_rename_workspace(
@@ -329,6 +351,25 @@ impl App {
                     .and_then(|ws| ws.focused_pane_id())
                 {
                     super::modal::open_rename_pane(&mut self.state, pane_id);
+                }
+            }
+            NavigateAction::ClearPaneName => {
+                if let Some((ws_idx, pane_id)) = self.state.active.and_then(|ws_idx| {
+                    self.state
+                        .workspaces
+                        .get(ws_idx)
+                        .and_then(|ws| ws.focused_pane_id())
+                        .map(|pane_id| (ws_idx, pane_id))
+                }) {
+                    if let Some(pane_id) = self.public_pane_id(ws_idx, pane_id) {
+                        self.runtime_pane_rename(
+                            "tui.key.pane.clear_name",
+                            crate::api::schema::PaneRenameParams {
+                                pane_id,
+                                label: None,
+                            },
+                        );
+                    }
                 }
             }
             NavigateAction::FocusPaneLeft => self.focus_pane_direction_via_api(NavDirection::Left),
@@ -1288,6 +1329,8 @@ pub(crate) enum NavigateAction {
     NewWorktree,
     OpenWorktree,
     RemoveWorktree,
+    CloneRepository,
+    ToggleWorktreeGroup,
     RenameWorkspace,
     CloseWorkspace,
     SwitchWorkspace(usize),
@@ -1304,6 +1347,7 @@ pub(crate) enum NavigateAction {
     NextTab,
     CloseTab,
     RenamePane,
+    ClearPaneName,
     FocusPaneLeft,
     FocusPaneDown,
     FocusPaneUp,
@@ -1425,6 +1469,11 @@ fn non_indexed_action_for_key(
         (&kb.new_worktree, NavigateAction::NewWorktree),
         (&kb.open_worktree, NavigateAction::OpenWorktree),
         (&kb.remove_worktree, NavigateAction::RemoveWorktree),
+        (&kb.clone_repository, NavigateAction::CloneRepository),
+        (
+            &kb.toggle_worktree_group,
+            NavigateAction::ToggleWorktreeGroup,
+        ),
         (&kb.rename_workspace, NavigateAction::RenameWorkspace),
         (&kb.close_workspace, NavigateAction::CloseWorkspace),
         (&kb.previous_workspace, NavigateAction::PreviousWorkspace),
@@ -1437,6 +1486,7 @@ fn non_indexed_action_for_key(
         (&kb.next_tab, NavigateAction::NextTab),
         (&kb.close_tab, NavigateAction::CloseTab),
         (&kb.rename_pane, NavigateAction::RenamePane),
+        (&kb.clear_pane_name, NavigateAction::ClearPaneName),
         (&kb.edit_scrollback, NavigateAction::EditScrollback),
         (&kb.copy_mode, NavigateAction::CopyMode),
         (&kb.focus_pane_left, NavigateAction::FocusPaneLeft),
@@ -1556,6 +1606,28 @@ pub(super) fn execute_navigate_action_in_context(
                 leave_navigate_mode(state);
             }
         }
+        NavigateAction::CloneRepository => {
+            if let Some(ws_idx) = workspace_action_target(state, context)
+                .filter(|idx| workspace_is_clonable(state, terminal_runtimes, *idx))
+            {
+                super::modal::open_devtree_clone_dialog(state, ws_idx);
+            }
+        }
+        NavigateAction::ToggleWorktreeGroup => {
+            if let Some(ws_idx) = workspace_action_target(state, context) {
+                if let Some((key, collapsed)) =
+                    crate::ui::workspace_parent_group_state(state, ws_idx)
+                {
+                    if collapsed {
+                        state.collapsed_space_keys.remove(&key);
+                    } else {
+                        state.collapsed_space_keys.insert(key);
+                    }
+                    state.mark_session_dirty();
+                }
+                leave_navigate_mode(state);
+            }
+        }
         NavigateAction::RenameWorkspace => {
             if let Some(ws_idx) = workspace_action_target(state, context) {
                 super::modal::open_rename_workspace(state, terminal_runtimes, ws_idx);
@@ -1644,6 +1716,19 @@ pub(super) fn execute_navigate_action_in_context(
                 .and_then(|ws| ws.focused_pane_id())
             {
                 super::modal::open_rename_pane(state, pane_id);
+            }
+        }
+        NavigateAction::ClearPaneName => {
+            if let Some(ws_idx) = state.active {
+                let terminal_id = state.workspaces.get(ws_idx).and_then(|ws| {
+                    ws.focused_pane_id()
+                        .and_then(|pane_id| ws.pane_state(pane_id))
+                        .map(|pane| pane.attached_terminal_id.clone())
+                });
+                if let Some(terminal) = terminal_id.and_then(|id| state.terminals.get_mut(&id)) {
+                    terminal.clear_manual_label();
+                    state.mark_session_dirty();
+                }
             }
         }
         NavigateAction::FocusPaneLeft => state.navigate_pane(NavDirection::Left),
@@ -1752,6 +1837,28 @@ fn workspace_can_start_worktree_action(
             .and_then(crate::workspace::git_space_metadata)
     });
     !git_space.is_some_and(|space| space.is_linked_worktree)
+}
+
+/// Mirrors the `show_git_menu` check in `mouse.rs` that picks between the
+/// `Workspace` and `GitWorkspace` context-menu kinds: only a workspace with no
+/// Git identity at all shows the "Clone repository" item.
+fn workspace_is_clonable(
+    state: &AppState,
+    terminal_runtimes: &TerminalRuntimeRegistry,
+    ws_idx: usize,
+) -> bool {
+    let Some(ws) = state.workspaces.get(ws_idx) else {
+        return false;
+    };
+    if ws.worktree_space().is_some() {
+        return false;
+    }
+    let git_space = ws.git_space().cloned().or_else(|| {
+        ws.resolved_identity_cwd_from(&state.terminals, terminal_runtimes)
+            .as_deref()
+            .and_then(crate::workspace::git_space_metadata)
+    });
+    git_space.is_none()
 }
 
 fn leave_navigate_mode(state: &mut AppState) {
@@ -2152,6 +2259,124 @@ mod tests {
         );
 
         assert_eq!(state.request_new_linked_worktree, Some(0));
+    }
+
+    #[test]
+    fn clone_repository_action_opens_dialog_for_plain_workspace() {
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        let mut state = state_with_workspaces(&["main"]);
+        state.workspaces[0].identity_cwd = unique_temp_path("navigate-clone-repository-plain");
+        state.mode = Mode::Terminal;
+        state.active = Some(0);
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::CloneRepository,
+            ActionContext::Direct,
+        );
+
+        assert_eq!(state.pending_devtree_clone_workspace, Some(0));
+        assert_eq!(state.mode, Mode::RenameWorkspace);
+    }
+
+    #[test]
+    fn clone_repository_action_is_noop_for_git_workspace() {
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        let mut state = state_with_workspaces(&["main"]);
+        mark_worktree_space_member(&mut state, 0, "repo-key");
+        state.mode = Mode::Terminal;
+        state.active = Some(0);
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::CloneRepository,
+            ActionContext::Direct,
+        );
+
+        assert_eq!(state.pending_devtree_clone_workspace, None);
+        assert_eq!(state.mode, Mode::Terminal);
+    }
+
+    #[test]
+    fn toggle_worktree_group_action_collapses_and_expands_group() {
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        let mut state = state_with_workspaces(&["main", "issue"]);
+        mark_worktree_space_member(&mut state, 0, "repo-key");
+        mark_worktree_space_member(&mut state, 1, "repo-key");
+        state.mode = Mode::Navigate;
+        state.selected = 0;
+        state.active = Some(0);
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::ToggleWorktreeGroup,
+            ActionContext::Navigate,
+        );
+        assert!(state.collapsed_space_keys.contains("repo-key"));
+
+        state.mode = Mode::Navigate;
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::ToggleWorktreeGroup,
+            ActionContext::Navigate,
+        );
+        assert!(!state.collapsed_space_keys.contains("repo-key"));
+    }
+
+    #[test]
+    fn toggle_worktree_group_action_is_noop_without_worktree_children() {
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        let mut state = state_with_workspaces(&["main"]);
+        state.mode = Mode::Navigate;
+        state.selected = 0;
+        state.active = Some(0);
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::ToggleWorktreeGroup,
+            ActionContext::Navigate,
+        );
+
+        assert!(state.collapsed_space_keys.is_empty());
+    }
+
+    #[test]
+    fn clear_pane_name_action_clears_focused_pane_manual_label() {
+        let mut terminal_runtimes = TerminalRuntimeRegistry::new();
+        let mut state = state_with_workspaces(&["main"]);
+        state.ensure_test_terminals();
+        state.mode = Mode::Terminal;
+        state.active = Some(0);
+        let pane_id = state.workspaces[0].focused_pane_id().unwrap();
+        let terminal_id = state.workspaces[0]
+            .pane_state(pane_id)
+            .unwrap()
+            .attached_terminal_id
+            .clone();
+        state
+            .terminals
+            .get_mut(&terminal_id)
+            .unwrap()
+            .set_manual_label("custom name".to_string());
+
+        execute_navigate_action_in_context(
+            &mut state,
+            &mut terminal_runtimes,
+            NavigateAction::ClearPaneName,
+            ActionContext::Direct,
+        );
+
+        assert!(state
+            .terminals
+            .get(&terminal_id)
+            .unwrap()
+            .manual_label
+            .is_none());
     }
 
     #[test]

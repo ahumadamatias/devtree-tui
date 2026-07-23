@@ -324,7 +324,7 @@ pub(crate) fn open_new_devtree_workspace_dialog(state: &mut AppState) {
     state.mode = Mode::RenameWorkspace;
 }
 
-fn open_devtree_clone_dialog(state: &mut AppState, ws_idx: usize) {
+pub(super) fn open_devtree_clone_dialog(state: &mut AppState, ws_idx: usize) {
     state.creating_new_tab = false;
     state.requested_new_tab_name = None;
     state.pending_workspace_create_cwd = None;

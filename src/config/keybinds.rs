@@ -317,6 +317,8 @@ pub struct Keybinds {
     pub new_worktree: ActionKeybinds,
     pub open_worktree: ActionKeybinds,
     pub remove_worktree: ActionKeybinds,
+    pub clone_repository: ActionKeybinds,
+    pub toggle_worktree_group: ActionKeybinds,
     pub rename_workspace: ActionKeybinds,
     pub close_workspace: ActionKeybinds,
     pub workspace_picker: ActionKeybinds,
@@ -337,6 +339,7 @@ pub struct Keybinds {
     pub switch_workspace: Vec<IndexedKeybind>,
     pub close_tab: ActionKeybinds,
     pub rename_pane: ActionKeybinds,
+    pub clear_pane_name: ActionKeybinds,
     pub edit_scrollback: ActionKeybinds,
     pub copy_mode: ActionKeybinds,
     pub focus_pane_left: ActionKeybinds,
@@ -479,6 +482,8 @@ impl Config {
             new_worktree: empty_action!(),
             open_worktree: empty_action!(),
             remove_worktree: empty_action!(),
+            clone_repository: empty_action!(),
+            toggle_worktree_group: empty_action!(),
             rename_workspace: empty_action!(),
             close_workspace: empty_action!(),
             workspace_picker: empty_action!(),
@@ -499,6 +504,7 @@ impl Config {
             switch_workspace: Vec::new(),
             close_tab: empty_action!(),
             rename_pane: empty_action!(),
+            clear_pane_name: empty_action!(),
             edit_scrollback: empty_action!(),
             copy_mode: empty_action!(),
             focus_pane_left: empty_action!(),
@@ -601,6 +607,12 @@ impl Config {
             apply_action!(keybinds.new_worktree, new_worktree, source);
             apply_action!(keybinds.open_worktree, open_worktree, source);
             apply_action!(keybinds.remove_worktree, remove_worktree, source);
+            apply_action!(keybinds.clone_repository, clone_repository, source);
+            apply_action!(
+                keybinds.toggle_worktree_group,
+                toggle_worktree_group,
+                source
+            );
             apply_action!(keybinds.rename_workspace, rename_workspace, source);
             apply_action!(keybinds.close_workspace, close_workspace, source);
             apply_action!(keybinds.workspace_picker, workspace_picker, source);
@@ -640,6 +652,7 @@ impl Config {
             );
             apply_action!(keybinds.close_tab, close_tab, source);
             apply_action!(keybinds.rename_pane, rename_pane, source);
+            apply_action!(keybinds.clear_pane_name, clear_pane_name, source);
             apply_action!(keybinds.edit_scrollback, edit_scrollback, source);
             apply_action!(keybinds.copy_mode, copy_mode, source);
             apply_action!(keybinds.focus_pane_left, focus_pane_left, source);
@@ -1578,10 +1591,63 @@ next_tab = "prefix+n"
     }
 
     #[test]
-    fn open_and_remove_worktree_keybinds_are_unset_by_default() {
+    fn open_worktree_defaults_to_prefix_shift_o() {
         let kb = Config::default().keybinds();
-        assert!(kb.open_worktree.bindings.is_empty());
-        assert!(kb.remove_worktree.bindings.is_empty());
+        assert_eq!(
+            binding_triggers(&kb.open_worktree),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Char('o'),
+                KeyModifiers::SHIFT
+            ))]
+        );
+    }
+
+    #[test]
+    fn remove_worktree_defaults_to_prefix_shift_backspace() {
+        let kb = Config::default().keybinds();
+        assert_eq!(
+            binding_triggers(&kb.remove_worktree),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Backspace,
+                KeyModifiers::SHIFT
+            ))]
+        );
+    }
+
+    #[test]
+    fn clone_repository_defaults_to_prefix_shift_c() {
+        let kb = Config::default().keybinds();
+        assert_eq!(
+            binding_triggers(&kb.clone_repository),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Char('c'),
+                KeyModifiers::SHIFT
+            ))]
+        );
+    }
+
+    #[test]
+    fn toggle_worktree_group_defaults_to_prefix_shift_b() {
+        let kb = Config::default().keybinds();
+        assert_eq!(
+            binding_triggers(&kb.toggle_worktree_group),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Char('b'),
+                KeyModifiers::SHIFT
+            ))]
+        );
+    }
+
+    #[test]
+    fn clear_pane_name_defaults_to_prefix_shift_0() {
+        let kb = Config::default().keybinds();
+        assert_eq!(
+            binding_triggers(&kb.clear_pane_name),
+            vec![BindingTrigger::Prefix((
+                KeyCode::Char('0'),
+                KeyModifiers::SHIFT
+            ))]
+        );
     }
 
     #[test]

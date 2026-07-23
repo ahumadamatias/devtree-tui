@@ -319,10 +319,14 @@ pub struct KeysConfig {
     pub new_workspace: BindingConfig,
     /// Create a Git worktree from the selected workspace. Default: "prefix+shift+g"
     pub new_worktree: BindingConfig,
-    /// Open an existing Git worktree from the selected workspace. Unset by default.
+    /// Open an existing Git worktree from the selected workspace. Default: "prefix+shift+o"
     pub open_worktree: BindingConfig,
-    /// Delete the selected managed worktree checkout after confirmation. Unset by default.
+    /// Delete the selected managed worktree checkout after confirmation. Default: "prefix+shift+backspace"
     pub remove_worktree: BindingConfig,
+    /// Clone a repository into the selected non-Git workspace. Default: "prefix+shift+c"
+    pub clone_repository: BindingConfig,
+    /// Toggle collapse for the selected workspace's worktree group. Default: "prefix+shift+b"
+    pub toggle_worktree_group: BindingConfig,
     /// Rename the selected workspace. Default: "prefix+shift+w"
     pub rename_workspace: BindingConfig,
     /// Close the selected workspace. Default: "prefix+shift+d"
@@ -377,6 +381,8 @@ pub struct KeysConfig {
     pub close_tab: BindingConfig,
     /// Rename the focused pane. Default: "prefix+shift+p".
     pub rename_pane: BindingConfig,
+    /// Clear the focused pane's manual name. Default: "prefix+shift+0".
+    pub clear_pane_name: BindingConfig,
     /// Open the focused pane scrollback in $EDITOR. Default: "prefix+e".
     pub edit_scrollback: BindingConfig,
     /// Enter keyboard copy mode for the focused pane. Default: "prefix+[".
@@ -443,6 +449,10 @@ pub(crate) struct KeysConfigOverlay {
     #[serde(skip_serializing_if = "Option::is_none")]
     remove_worktree: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    clone_repository: Option<BindingConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    toggle_worktree_group: Option<BindingConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     rename_workspace: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     close_workspace: Option<BindingConfig>,
@@ -496,6 +506,8 @@ pub(crate) struct KeysConfigOverlay {
     close_tab: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     rename_pane: Option<BindingConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    clear_pane_name: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     edit_scrollback: Option<BindingConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -564,6 +576,8 @@ impl<'de> Deserialize<'de> for KeysConfig {
         apply_field!(new_worktree);
         apply_field!(open_worktree);
         apply_field!(remove_worktree);
+        apply_field!(clone_repository);
+        apply_field!(toggle_worktree_group);
         apply_field!(rename_workspace);
         apply_field!(close_workspace);
         apply_field!(workspace_picker);
@@ -591,6 +605,7 @@ impl<'de> Deserialize<'de> for KeysConfig {
         apply_field!(switch_workspace);
         apply_field!(close_tab);
         apply_field!(rename_pane);
+        apply_field!(clear_pane_name);
         apply_field!(edit_scrollback);
         apply_field!(copy_mode);
         apply_field!(focus_pane_left);
@@ -662,6 +677,8 @@ impl KeysConfig {
         copy_effective_action_field!(new_worktree, keybinds.new_worktree);
         copy_effective_action_field!(open_worktree, keybinds.open_worktree);
         copy_effective_action_field!(remove_worktree, keybinds.remove_worktree);
+        copy_effective_action_field!(clone_repository, keybinds.clone_repository);
+        copy_effective_action_field!(toggle_worktree_group, keybinds.toggle_worktree_group);
         copy_effective_action_field!(rename_workspace, keybinds.rename_workspace);
         copy_effective_action_field!(close_workspace, keybinds.close_workspace);
         copy_effective_action_field!(workspace_picker, keybinds.workspace_picker);
@@ -689,6 +706,7 @@ impl KeysConfig {
         copy_effective_indexed_field!(switch_workspace, keybinds.switch_workspace);
         copy_effective_action_field!(close_tab, keybinds.close_tab);
         copy_effective_action_field!(rename_pane, keybinds.rename_pane);
+        copy_effective_action_field!(clear_pane_name, keybinds.clear_pane_name);
         copy_effective_action_field!(edit_scrollback, keybinds.edit_scrollback);
         copy_effective_action_field!(copy_mode, keybinds.copy_mode);
         copy_effective_action_field!(focus_pane_left, keybinds.focus_pane_left);
@@ -925,8 +943,10 @@ impl Default for KeysConfig {
             settings: BindingConfig::one("prefix+s"),
             new_workspace: BindingConfig::one("prefix+shift+n"),
             new_worktree: BindingConfig::one("prefix+shift+g"),
-            open_worktree: BindingConfig::empty(),
-            remove_worktree: BindingConfig::empty(),
+            open_worktree: BindingConfig::one("prefix+shift+o"),
+            remove_worktree: BindingConfig::one("prefix+shift+backspace"),
+            clone_repository: BindingConfig::one("prefix+shift+c"),
+            toggle_worktree_group: BindingConfig::one("prefix+shift+b"),
             rename_workspace: BindingConfig::one("prefix+shift+w"),
             close_workspace: BindingConfig::one("prefix+shift+d"),
             workspace_picker: BindingConfig::one("prefix+w"),
@@ -954,6 +974,7 @@ impl Default for KeysConfig {
             switch_workspace: BindingConfig::empty(),
             close_tab: BindingConfig::one("prefix+shift+x"),
             rename_pane: BindingConfig::one("prefix+shift+p"),
+            clear_pane_name: BindingConfig::one("prefix+shift+0"),
             edit_scrollback: BindingConfig::one("prefix+e"),
             copy_mode: BindingConfig::one("prefix+["),
             focus_pane_left: BindingConfig::one("prefix+h"),

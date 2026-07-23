@@ -238,14 +238,26 @@
         {
           "key": "keys.open_worktree",
           "type": "keybinding",
-          "default": "unset",
-          "description": "Open an existing Git worktree from the selected workspace. Unset by default."
+          "default": "\"prefix+shift+o\"",
+          "description": "Open an existing Git worktree from the selected workspace."
         },
         {
           "key": "keys.remove_worktree",
           "type": "keybinding",
-          "default": "unset",
-          "description": "Delete the selected managed worktree checkout after confirmation. Unset by default."
+          "default": "\"prefix+shift+backspace\"",
+          "description": "Delete the selected managed worktree checkout after confirmation."
+        },
+        {
+          "key": "keys.clone_repository",
+          "type": "keybinding",
+          "default": "\"prefix+shift+c\"",
+          "description": "Clone a repository into the selected non-Git workspace."
+        },
+        {
+          "key": "keys.toggle_worktree_group",
+          "type": "keybinding",
+          "default": "\"prefix+shift+b\"",
+          "description": "Toggle collapse for the selected workspace's worktree group."
         },
         {
           "key": "keys.rename_workspace",
@@ -408,6 +420,12 @@
           "type": "keybinding",
           "default": "\"prefix+shift+p\"",
           "description": "Rename the focused pane."
+        },
+        {
+          "key": "keys.clear_pane_name",
+          "type": "keybinding",
+          "default": "\"prefix+shift+0\"",
+          "description": "Clear the focused pane's manual name."
         },
         {
           "key": "keys.edit_scrollback",

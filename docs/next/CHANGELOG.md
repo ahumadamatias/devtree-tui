@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Added default keybindings for every remaining context-menu action: clone repository (`prefix+shift+c`), open worktree (`prefix+shift+o`), delete worktree checkout (`prefix+shift+backspace`), collapse/expand worktree group (`prefix+shift+b`), and clear pane name (`prefix+shift+0`).
+
 ## [0.7.5] - 2026-07-21
 
 ### Breaking Changes
